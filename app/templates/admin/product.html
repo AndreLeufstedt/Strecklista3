@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}{{ product.name }} – Administration{% endblock %}
+{% block header_title %}Redigera {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+  <div class="profile-header">
+    {% if product.picture() %}
+      <img src="{{ url_for('static', filename=product.picture()) }}" class="profile-img" alt="{{ product.name }}">
+    {% endif %}
+    <div style="flex: 1;">
+      <h2>{{ product.name }}</h2>
+      <p style="font-family: monospace; color: var(--text-muted);">Streckkod: {{ product.barcode }}</p>
+      <p style="margin-top: 0.25rem;">
+        Pris: <strong>{{ "%.1f"|format(product.price) }} kr</strong>
+      </p>
+      <p style="margin-top: 0.25rem; color: var(--text-muted);">
+        Kategori: {{ product.category() }}
+      </p>
+      <p style="margin-top: 0.25rem;">
+        Status: 
+        {% if product.hidden() %}
+          <span style="color: var(--text-muted); font-weight: bold;">Dold (borttagen)</span>
+        {% elif product.enabled() %}
+          <span style="color: var(--success); font-weight: bold;">Aktiv</span>
+        {% else %}
+          <span style="color: var(--danger); font-weight: bold;">Inaktiv</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <form action="{{ url_for('admin.product_update', barcode=product.barcode) }}" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="name">Produktnamn:</label>
+      <input type="text" name="name" id="name" class="form-control" value="{{ product.name }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="price">Pris (SEK):</label>
+      <input type="number" step="0.5" min="0" name="price" id="price" class="form-control" value="{{ product.price }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="category">Kategori:</label>
+      <select name="category" id="category" class="form-control" required>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if cat.id == product.category_id %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="picture">Byt produktbild:</label>
+      <input type="file" name="picture" id="picture" class="form-control" accept="image/*">
+    </div>
+
+    <div class="actions-row" style="flex-wrap: wrap; gap: 0.5rem;">
+      <button type="submit" class="btn btn-primary">Spara ändringar</button>
+      
+      {% if not product.hidden() %}
+        <a href="{{ url_for('admin.product_delete', barcode=product.barcode) }}" class="btn btn-danger" onclick="return confirm('Vill du ta bort denna produkt? Produkten kommer att döljas från listor och terminalen.');">Ta bort</a>
+      {% else %}
+        <a href="{{ url_for('admin.product_restore', barcode=product.barcode) }}" class="btn btn-success" onclick="return confirm('Vill du återställa denna produkt?');">Återställ</a>
+      {% endif %}
+
+      <a href="{{ url_for('admin.product_list', hidden='1' if product.hidden() else '0') }}" class="btn" style="margin-left: auto;">Tillbaka</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

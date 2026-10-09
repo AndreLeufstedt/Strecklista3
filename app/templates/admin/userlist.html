@@ -1,0 +1,117 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Användare – Administration{% endblock %}
+{% block header_title %}Användarlista{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+      <h2 style="margin: 0;">
+        {% if show_hidden %}
+          Dolda användare ({{ users|length }})
+        {% else %}
+          Alla användare ({{ users|length }})
+        {% endif %}
+      </h2>
+      {% if show_hidden %}
+        <a href="{{ url_for('admin.user_list') }}" class="btn" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">Visa aktiva användare</a>
+      {% else %}
+        <a href="{{ url_for('admin.user_list', hidden='1') }}" class="btn" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">Visa dolda användare</a>
+      {% endif %}
+    </div>
+    {% if not show_hidden %}
+      <a href="{{ url_for('admin.user_add') }}" class="btn btn-primary">+ Lägg till ny användare</a>
+    {% endif %}
+  </div>
+
+  <div class="search-container">
+    <form action="{{ url_for('admin.user_list') }}" method="get" style="display: flex; gap: 0.5rem; width: 100%;">
+      {% if show_hidden %}
+        <input type="hidden" name="hidden" value="1">
+      {% endif %}
+      <input 
+        type="text" 
+        name="q" 
+        id="user-search" 
+        value="{{ search_query or '' }}" 
+        class="search-input" 
+        placeholder="Sök användare på namn eller streckkod..." 
+        autocomplete="off"
+      >
+      <button type="submit" class="btn">Sök</button>
+      {% if search_query %}
+        <a href="{{ url_for('admin.user_list', hidden='1' if show_hidden else '0') }}" class="btn">Rensa</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <table id="user-table">
+    <thead>
+      <tr>
+        <th>Namn</th>
+        <th>Streckkod / ID</th>
+        <th>Status</th>
+        <th style="text-align: right;">Skuld</th>
+        <th>Åtgärd</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+        <tr class="user-row" data-search="{{ u.name|lower }} {{ u.barcode|lower }}">
+          <td>
+            {% if u.picture() %}
+              <img src="{{ url_for('static', filename=u.picture()) }}" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 0.5rem;" alt="">
+            {% endif %}
+            <strong>{{ u.name }}</strong>
+          </td>
+          <td style="font-family: monospace;">{{ u.barcode }}</td>
+          <td>
+            {% if u.hidden() %}
+              <span style="color: var(--text-muted); font-weight: 500;">Dold</span>
+            {% elif u.enabled() %}
+              <span style="color: var(--success); font-weight: 500;">Aktiv</span>
+            {% else %}
+              <span style="color: var(--danger); font-weight: 500;">Spärrad</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right; font-weight: bold; {% if u.debt() > 0 %}color: var(--danger);{% endif %}">
+            {{ "%.1f"|format(u.debt()) }} kr
+          </td>
+          <td style="white-space: nowrap;">
+            <a href="{{ url_for('admin.user_show', barcode=u.barcode) }}" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Redigera</a>
+            {% if u.hidden() %}
+              <a href="{{ url_for('admin.user_restore', barcode=u.barcode) }}" class="btn btn-success" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;" onclick="return confirm('Vill du återställa denna användare?');">Återställ</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+            {% if show_hidden %}
+              Inga dolda användare hittades.
+            {% else %}
+              Inga användare matchade sökningen.
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  // Instant real-time filtering as the user types
+  var searchInput = document.getElementById('user-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      var val = this.value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.user-row');
+      rows.forEach(function(row) {
+        var text = row.getAttribute('data-search') || '';
+        row.style.display = text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+  }
+</script>
+{% endblock %}

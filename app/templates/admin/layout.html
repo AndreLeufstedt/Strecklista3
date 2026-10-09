@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Administration – Strecklistan{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <a href="{{ url_for('admin.product_list') }}" class="brand-wrapper">
+      <img src="{{ url_for('static', filename='logos/CFFC_logga_NEW_square.png') }}" alt="CFFC" class="brand-logo">
+      <span class="brand-title">{% block header_title %}Administration{% endblock %}</span>
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="{{ url_for('admin.product_list') }}">Produkter</a></li>
+        <li><a href="{{ url_for('admin.user_list') }}">Användare</a></li>
+        <li><a href="{{ url_for('admin.purchase_stats') }}">Köpstatistik</a></li>
+        <li><a href="{{ url_for('admin.export_debts') }}">Exportera skulder</a></li>
+        <li><a href="{{ url_for('admin.settings') }}">Inställningar</a></li>
+        <li><a href="{{ url_for('kiosk.index') }}" style="color: var(--accent); font-weight: 700;">Till Terminalen</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash-messages">
+        {% for message in messages %}
+          <div class="flash-item">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <img src="{{ url_for('static', filename='logos/CFFC Footer 2026.png') }}" alt="Chalmers Film- & Fotocommitté" class="footer-logo">
+  </footer>
+</body>
+</html>

@@ -1,0 +1,197 @@
+{% extends "layout.html" %}
+
+{% block title %}Köpstatistik för {{ user.name }} – Strecklistan{% endblock %}
+{% block header_title %}Personstatistik{% endblock %}
+
+{% block scanner %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="profile-header" style="margin-bottom: 1.5rem;">
+    {% if user.picture() %}
+      <img src="{{ url_for('static', filename=user.picture()) }}" class="profile-img" alt="{{ user.name }}">
+    {% endif %}
+    <div style="flex: 1;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h2 style="margin: 0;">{{ user.name }}</h2>
+          <p style="font-family: monospace; color: var(--text-muted); margin-top: 0.25rem;">
+            Streckkod / ID: {{ user.barcode }}
+          </p>
+        </div>
+        <a href="{{ url_for('stats.index') }}" class="btn">Tillbaka till statistik</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="metric-card">
+      <span class="metric-label">Totalt handlat</span>
+      <span class="metric-value">{{ "%.1f"|format(total_spent) }} kr</span>
+      <span class="metric-sub">Ackumulerat genom tiderna</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Totalt antal varor</span>
+      <span class="metric-value">{{ total_items }} st</span>
+      <span class="metric-sub">Registrerade köp</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Aktuell skuld</span>
+      <span class="metric-value" style="{% if user.debt() > 0 %}color: var(--danger);{% endif %}">
+        {{ "%.1f"|format(user.debt()) }} kr
+      </span>
+      <span class="metric-sub">Utestående saldo</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Favoritprodukt</span>
+      {% if favorite_product %}
+        <span class="metric-value" style="font-size: 1.35rem;">{{ favorite_product['name'] }}</span>
+        <span class="metric-sub">{{ favorite_product['count'] }} st ({{ "%.1f"|format(favorite_product['total']) }} kr)</span>
+      {% else %}
+        <span class="metric-value" style="font-size: 1.2rem; color: var(--text-muted);">-</span>
+        <span class="metric-sub">Inga köp ännu</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if category_breakdown %}
+<div class="card">
+  <h2>Kategorifördelning</h2>
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">
+    Fördelning av personens totala inköp per varukategori.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Kategori</th>
+        <th style="text-align: right;">Antal köp</th>
+        <th style="text-align: right;">Total summa</th>
+        <th style="text-align: right;">Andel av totalt spenderat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat in category_breakdown %}
+        {% set pct = (cat['total'] / total_spent * 100) if total_spent > 0 else 0 %}
+        <tr>
+          <td><strong>{{ cat['category_name'] }}</strong></td>
+          <td style="text-align: right;">{{ cat['count'] }} st</td>
+          <td style="text-align: right; font-weight: bold;">{{ "%.1f"|format(cat['total']) }} kr</td>
+          <td style="text-align: right;">{{ "%.1f"|format(pct) }} %</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+    <div>
+      <h2 style="margin: 0;">Köpta produkter ({{ product_breakdown|length }} olika artiklar)</h2>
+      <p style="color: var(--text-muted); margin-top: 0.25rem;">
+        Fullständig sammanställning över exakt vad {{ user.name }} har köpt av varje enskild vara.
+      </p>
+    </div>
+  </div>
+
+  {% if product_breakdown %}
+    <div class="search-container">
+      <input 
+        type="text" 
+        id="user-product-search" 
+        class="search-input" 
+        placeholder="Filtrera bland köpta produkter eller kategori..." 
+        autocomplete="off"
+      >
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Produkt</th>
+          <th>Kategori</th>
+          <th style="text-align: right;">Antal köpta</th>
+          <th style="text-align: right;">Totalt belopp</th>
+          <th style="text-align: right;">Senast köpt</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in product_breakdown %}
+          <tr class="user-prod-row" data-search="{{ p.name|lower }} {{ p.category_name|lower }} {{ p.barcode|lower }}">
+            <td>
+              <strong>{{ p.name }}</strong>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">{{ p.barcode }}</div>
+            </td>
+            <td>{{ p.category_name }}</td>
+            <td style="text-align: right; font-weight: bold;">{{ p.count }} st</td>
+            <td style="text-align: right; font-weight: bold;">{{ "%.1f"|format(p.total) }} kr</td>
+            <td style="text-align: right; font-size: 0.9rem; color: var(--text-muted);">
+              {{ p.last_bought }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: var(--text-muted); padding: 1.5rem 0; text-align: center;">
+      Inga registrerade produktköp för denna användare.
+    </p>
+  {% endif %}
+</div>
+
+{% if recent_purchases %}
+<div class="card">
+  <h2>Senaste köphistorik</h2>
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">
+    De {{ recent_purchases|length }} senaste genomförda köpen i kronologisk ordning.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Datum & Tid</th>
+        <th>Produkt</th>
+        <th>Kategori</th>
+        <th style="text-align: right;">Pris</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in recent_purchases %}
+        <tr>
+          <td style="font-size: 0.9rem; color: var(--text-muted);">{{ item.created_at|dmy }}</td>
+          <td><strong>{{ item.product_name }}</strong></td>
+          <td>{{ item.category_name }}</td>
+          <td style="text-align: right; font-weight: bold;">{{ "%.1f"|format(item.price) }} kr</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div style="margin: 2rem 0; text-align: center;">
+  <a href="{{ url_for('stats.index') }}" class="btn" style="padding: 0.75rem 2rem; font-size: 1.05rem;">
+    Tillbaka till all statistik
+  </a>
+</div>
+
+<script>
+  // Live filtering for user's product list
+  var prodSearch = document.getElementById('user-product-search');
+  if (prodSearch) {
+    prodSearch.addEventListener('input', function() {
+      var val = this.value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.user-prod-row');
+      rows.forEach(function(row) {
+        var text = row.getAttribute('data-search') || '';
+        row.style.display = text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+  }
+</script>
+{% endblock %}

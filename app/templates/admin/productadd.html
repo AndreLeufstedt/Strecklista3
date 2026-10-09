@@ -1,0 +1,50 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Lägg till produkt – Administration{% endblock %}
+{% block header_title %}Ny produkt{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+  <h2>Lägg till ny produkt</h2>
+  <div style="background: #fffaf0; border: 1px solid #feebc8; padding: 0.75rem 1rem; border-radius: 6px; margin: 1rem 0;">
+    <strong>Tips vid skanning:</strong> Eftersom streckkodsläsaren automatiskt skickar formuläret (trycker Enter), fyll i namn, pris och kategori först – och skanna streckkoden sist!
+  </div>
+
+  <form action="{{ url_for('admin.product_add') }}" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="name">Produktnamn:</label>
+      <input type="text" name="name" id="name" class="form-control" required placeholder="T.ex. Mariestads 50cl">
+    </div>
+
+    <div class="form-group">
+      <label for="price">Pris (SEK):</label>
+      <input type="number" step="0.5" min="0" name="price" id="price" class="form-control" required placeholder="T.ex. 20">
+    </div>
+
+    <div class="form-group">
+      <label for="category">Kategori:</label>
+      <select name="category" id="category" class="form-control" required>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="barcode">Streckkod (Skanna eller skriv in):</label>
+      <input type="text" name="barcode" id="barcode" class="form-control" required placeholder="EAN-kod / streckkod">
+    </div>
+
+    <div class="form-group">
+      <label for="picture">Produktbild (valfritt):</label>
+      <input type="file" name="picture" id="picture" class="form-control" accept="image/*">
+    </div>
+
+    <div class="actions-row">
+      <button type="submit" class="btn btn-primary">Spara produkt</button>
+      <a href="{{ url_for('admin.product_list') }}" class="btn">Avbryt</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+

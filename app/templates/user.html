@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ user.name }} – Strecklistan{% endblock %}
+{% block header_title %}{{ user.name }}{% endblock %}
+
+{% block head %}
+  {% if bought or paid or undone %}
+    <meta http-equiv="refresh" content="{{ confirm_timeout }}; URL={{ url_for('kiosk.show_user', barcode=user.barcode) }}">
+  {% else %}
+    <meta http-equiv="refresh" content="{{ user_timeout }}; URL={{ url_for('kiosk.index') }}">
+  {% endif %}
+{% endblock %}
+
+{% block action %}{{ url_for('kiosk.user_buy', barcode=user.barcode) }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="profile-header">
+    {% if bought %}
+      {% if bought.picture() %}
+        <img src="{{ url_for('static', filename=bought.picture()) }}" class="profile-img" alt="{{ bought.name }}">
+      {% endif %}
+      <div style="flex: 1;">
+        <h2 style="color: var(--success); font-size: 1.8rem;">Köpt: {{ bought.name }}</h2>
+        <p style="font-size: 1.1rem; color: var(--text-main); margin-top: 0.25rem;">
+          Pris: <strong>{{ "%.1f"|format(bought.price) }} kr</strong> har lagts till på din skuld.
+        </p>
+      </div>
+    {% elif paid %}
+      <div style="flex: 1;">
+        <h2 style="color: var(--success); font-size: 1.8rem;">Skulden är nollställd!</h2>
+        <p style="font-size: 1.1rem; color: var(--text-muted); margin-top: 0.25rem;">Tack för din betalning.</p>
+      </div>
+    {% elif undone %}
+      <div style="flex: 1;">
+        <h2 style="color: var(--warning); font-size: 1.8rem;">Senaste köpet ångrat!</h2>
+        <p style="font-size: 1.1rem; color: var(--text-muted); margin-top: 0.25rem;">Transaktionen togs bort från ditt konto.</p>
+      </div>
+    {% else %}
+      {% if user.picture() %}
+        <img src="{{ url_for('static', filename=user.picture()) }}" class="profile-img" alt="{{ user.name }}">
+      {% endif %}
+      <div style="flex: 1;">
+        <h2 style="font-size: 1.9rem; letter-spacing: -0.02em;">{{ user.name }}</h2>
+        <p style="color: var(--text-muted); font-size: 1.05rem;">Skanna en vara för att handla</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="debt-banner">
+    <span style="font-size: 0.95rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em;">Total skuld</span>
+    <span class="debt-amount">{{ "%.1f"|format(user.debt()) }} kr</span>
+    {% set cat_debts = user.debt_per_category() %}
+    {% if cat_debts %}
+      <div class="category-badges">
+        {% for cat in cat_debts %}
+          <span class="category-badge">
+            {{ cat['name'] }}: <strong>{{ "%.1f"|format(cat['debt']) }} kr</strong>
+          </span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <h3 style="font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.5rem;">Senaste händelser</h3>
+  {% set txs = user.transactions(11) %}
+  {% if txs %}
+    <table>
+      <thead>
+        <tr>
+          <th>Tid</th>
+          <th>Vara / Händelse</th>
+          <th style="text-align: right;">Belopp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in txs %}
+          <tr>
+            <td style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted);">{{ t['added'] }}</td>
+            <td><strong>{{ t['name'] }}</strong></td>
+            <td style="text-align: right; font-weight: 600; {% if t['price'] < 0 %}color: var(--success);{% endif %}">
+              {{ "%.1f"|format(t['price']) }} kr
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color: var(--text-muted); margin-top: 0.5rem;">Inga tidigare transaktioner registrerade.</p>
+  {% endif %}
+
+  <div class="actions-row">
+    <a href="{{ url_for('kiosk.user_undo', barcode=user.barcode) }}" class="btn">Ångra senaste</a>
+    <a href="{{ url_for('kiosk.user_paid', barcode=user.barcode) }}" class="btn">Markera betalt (Nollställ)</a>
+    <a href="{{ url_for('kiosk.index') }}" class="btn btn-danger" style="margin-left: auto;">Logga ut</a>
+  </div>
+</div>
+{% endblock %}

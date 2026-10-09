@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block title %}Start – Strecklista{% endblock %}
+{% block header_title %}Strecklista{% endblock %}
+{% block action %}{{ url_for('kiosk.user_arrival') }}{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 3rem 1.5rem;">
+  <h2 style="font-size: 1.8rem; margin-bottom: 0.75rem;">Välkommen till strecklistan</h2>
+  <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.6;">
+    Skanna din <strong>streckkod</strong> för att logga in.<br>
+    Eller skanna en <strong>produkt</strong> direkt för att se pris.
+  </p>
+</div>
+{% endblock %}

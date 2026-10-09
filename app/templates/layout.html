@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Strecklistan{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <a href="{{ url_for('kiosk.index') }}" class="brand-wrapper">
+      <img src="{{ url_for('static', filename='logos/CFFC_logga_NEW_square.png') }}" alt="CFFC" class="brand-logo">
+      <span class="brand-title">{% block header_title %}Strecklistan{% endblock %}</span>
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="{{ url_for('kiosk.index') }}">Terminal / Hem</a></li>
+        <li><a href="{{ url_for('stats.index') }}">Statistik</a></li>
+        <li><a href="{{ url_for('admin.product_list') }}">Administration</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  {% block scanner %}
+  <div class="scanner-container">
+    <form action="{% block action %}{{ url_for('kiosk.user_arrival') }}{% endblock %}" method="post" autocomplete="off">
+      <input type="text" name="barcode" id="barcode" class="scanner-input" placeholder="Skanna streckkod här..." autofocus>
+    </form>
+  </div>
+  {% endblock %}
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="flash-messages">
+        {% for message in messages %}
+          <div class="flash-item">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <img src="{{ url_for('static', filename='logos/CFFC Footer 2026.png') }}" alt="Chalmers Film- & Fotocommitté" class="footer-logo">
+  </footer>
+
+  <script>
+    // Keep focus in the scanner input field for USB barcode readers
+    window.addEventListener('load', function() {
+      var input = document.getElementById('barcode');
+      if (input) {
+        input.focus();
+        document.addEventListener('click', function(e) {
+          if (!['INPUT', 'TEXTAREA', 'BUTTON', 'A', 'SELECT'].includes(e.target.tagName)) {
+            input.focus();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

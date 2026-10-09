@@ -1,0 +1,119 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Produkter – Administration{% endblock %}
+{% block header_title %}Produktlista{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+      <h2 style="margin: 0;">
+        {% if show_hidden %}
+          Dolda produkter ({{ products|length }})
+        {% else %}
+          Alla produkter ({{ products|length }})
+        {% endif %}
+      </h2>
+      {% if show_hidden %}
+        <a href="{{ url_for('admin.product_list') }}" class="btn" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">Visa aktiva produkter</a>
+      {% else %}
+        <a href="{{ url_for('admin.product_list', hidden='1') }}" class="btn" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">Visa dolda produkter</a>
+      {% endif %}
+    </div>
+    {% if not show_hidden %}
+      <a href="{{ url_for('admin.product_add') }}" class="btn btn-primary">+ Lägg till ny produkt</a>
+    {% endif %}
+  </div>
+
+  <div class="search-container">
+    <form action="{{ url_for('admin.product_list') }}" method="get" style="display: flex; gap: 0.5rem; width: 100%;">
+      {% if show_hidden %}
+        <input type="hidden" name="hidden" value="1">
+      {% endif %}
+      <input 
+        type="text" 
+        name="q" 
+        id="product-search" 
+        value="{{ search_query or '' }}" 
+        class="search-input" 
+        placeholder="Sök produkt på namn, streckkod eller kategori..." 
+        autocomplete="off"
+      >
+      <button type="submit" class="btn">Sök</button>
+      {% if search_query %}
+        <a href="{{ url_for('admin.product_list', hidden='1' if show_hidden else '0') }}" class="btn">Rensa</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <table id="product-table">
+    <thead>
+      <tr>
+        <th>Namn</th>
+        <th>Streckkod</th>
+        <th>Kategori</th>
+        <th style="text-align: right;">Pris</th>
+        <th>Status</th>
+        <th>Åtgärd</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+        <tr class="product-row" data-search="{{ p.name|lower }} {{ p.barcode|lower }} {{ p.category()|lower }}">
+          <td>
+            {% if p.picture() %}
+              <img src="{{ url_for('static', filename=p.picture()) }}" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 0.5rem;" alt="">
+            {% endif %}
+            <strong>{{ p.name }}</strong>
+          </td>
+          <td style="font-family: monospace;">{{ p.barcode }}</td>
+          <td>{{ p.category() }}</td>
+          <td style="text-align: right; font-weight: bold;">
+            {{ "%.1f"|format(p.price) }} kr
+          </td>
+          <td>
+            {% if p.hidden() %}
+              <span style="color: var(--text-muted); font-weight: 500;">Dold</span>
+            {% elif p.enabled() %}
+              <span style="color: var(--success); font-weight: 500;">Aktiv</span>
+            {% else %}
+              <span style="color: var(--danger); font-weight: 500;">Inaktiv</span>
+            {% endif %}
+          </td>
+          <td style="white-space: nowrap;">
+            <a href="{{ url_for('admin.product_show', barcode=p.barcode) }}" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Redigera</a>
+            {% if p.hidden() %}
+              <a href="{{ url_for('admin.product_restore', barcode=p.barcode) }}" class="btn btn-success" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;" onclick="return confirm('Vill du återställa denna produkt?');">Återställ</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+            {% if show_hidden %}
+              Inga dolda produkter hittades.
+            {% else %}
+              Inga produkter matchade sökningen.
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  // Instant real-time filtering as the user types
+  var searchInput = document.getElementById('product-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      var val = this.value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.product-row');
+      rows.forEach(function(row) {
+        var text = row.getAttribute('data-search') || '';
+        row.style.display = text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+  }
+</script>
+{% endblock %}

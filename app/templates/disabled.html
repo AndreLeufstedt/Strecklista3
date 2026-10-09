@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}Spärrad – Strecklistan{% endblock %}
+{% block header_title %}Nej!{% endblock %}
+
+{% block head %}
+  <meta http-equiv="refresh" content="5; URL={{ url_for('kiosk.index') }}">
+{% endblock %}
+
+{% block content %}
+  <div style="width: 80px; height: 80px; border-radius: 50%; background: #fee2e2; border: 4px solid var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+    </svg>
+  </div>
+  <h2 style="color: var(--danger); font-size: 2rem;">Nej!</h2>
+  <p style="font-size: 1.25rem; margin-top: 1rem;">
+    Du får tyvärr inte strecka.<br>
+    Vänligen kontakta din kassör eller administratör.
+  </p>
+  <div style="margin-top: 2rem;">
+    <a href="{{ url_for('kiosk.index') }}" class="btn">Tillbaka</a>
+  </div>
+</div>
+{% endblock %}
+

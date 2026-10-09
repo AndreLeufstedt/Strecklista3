@@ -1,0 +1,55 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Exportera streckskulder – Administration{% endblock %}
+{% block header_title %}Exportera & Avräkna{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>Aktuella skulder per kategori</h2>
+  <p style="color: var(--text-muted); margin: 0.5rem 0 1.5rem 0;">
+    Översikt inför månadssammanställning och avräkning. Knappen "Nollställ alla personers skulder" nedan balanserar samtliga användares saldon.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Användare</th>
+        {% for cat in categories %}
+          <th style="text-align: right;">{{ cat.name }}</th>
+        {% endfor %}
+        <th style="text-align: right;">Total skuld</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+        {% set cat_map = {} %}
+        {% for c in u.debt_per_category() %}
+          {% set _ = cat_map.update({c['name']: c['debt']}) %}
+        {% endfor %}
+        <tr>
+          <td><strong>{{ u.name }}</strong></td>
+          {% for cat in categories %}
+            <td style="text-align: right;">
+              {% if cat.name in cat_map %}
+                {{ "%.1f"|format(cat_map[cat.name]) }} kr
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td style="text-align: right; font-weight: bold; {% if u.debt() > 0 %}color: var(--danger);{% endif %}">
+            {{ "%.1f"|format(u.debt()) }} kr
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="actions-row" style="margin-top: 2rem;">
+    <a href="{{ url_for('admin.export_empty') }}" class="btn btn-danger" onclick="return confirm('Är du helt säker på att du vill nollställa ALLAS skulder?');">
+      Nollställ alla personers skulder
+    </a>
+    <a href="{{ url_for('admin.product_list') }}" class="btn" style="margin-left: auto;">Tillbaka</a>
+  </div>
+</div>
+{% endblock %}

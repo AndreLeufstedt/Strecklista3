@@ -1,0 +1,367 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Köpstatistik – Administration{% endblock %}
+{% block header_title %}Köpstatistik{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+    <div>
+      <h2 style="margin: 0;">Produktförsäljning & Statistik</h2>
+      <p style="color: var(--text-muted); margin: 0.25rem 0 0 0; font-size: 0.95rem;">
+        Visar försäljning mellan <strong>{{ start_date|date_dmy }}</strong> och <strong>{{ end_date|date_dmy }}</strong>.
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <a href="{{ url_for('admin.purchase_export_products_csv', start_date=start_date, end_date=end_date, include_zero='1' if include_zero else '0') }}" class="btn btn-primary">
+        Exportera produktlista (CSV)
+      </a>
+      <a href="{{ url_for('admin.purchase_export_csv', start_date=start_date, end_date=end_date) }}" class="btn">
+        Exportera transaktioner (CSV)
+      </a>
+    </div>
+  </div>
+
+  <!-- Date Range Filter Form -->
+  <form id="filter-form" action="{{ url_for('admin.purchase_stats') }}" method="get" style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap;">
+      <div>
+        <label for="start_date" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem;">
+          Från datum
+        </label>
+        <input 
+          type="date" 
+          id="start_date" 
+          name="start_date" 
+          value="{{ start_date }}" 
+          class="form-control"
+          style="padding: 0.45rem 0.65rem;"
+          required
+        >
+      </div>
+
+      <div>
+        <label for="end_date" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem;">
+          Till datum
+        </label>
+        <input 
+          type="date" 
+          id="end_date" 
+          name="end_date" 
+          value="{{ end_date }}" 
+          class="form-control"
+          style="padding: 0.45rem 0.65rem;"
+          required
+        >
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem; height: 38px;">
+        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text-main); cursor: pointer; margin: 0; user-select: none;">
+          <input 
+            type="checkbox" 
+            name="include_zero" 
+            value="1" 
+            {% if include_zero %}checked{% endif %}
+            onchange="document.getElementById('filter-form').submit();"
+          >
+          Visa även osålda produkter (0 st)
+        </label>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">
+          Visa
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Date Range Presets -->
+    <div style="display: flex; gap: 0.5rem; margin-top: 0.85rem; flex-wrap: wrap; align-items: center;">
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Snabbval:</span>
+      <a 
+        href="{{ url_for('admin.purchase_stats', start_date=four_weeks_ago, end_date=today, include_zero='1' if include_zero else '0') }}" 
+        class="btn {% if start_date == four_weeks_ago and end_date == today %}btn-primary{% endif %}"
+        style="font-size: 0.8rem; padding: 0.25rem 0.6rem;"
+      >
+        Senaste 4 veckorna (Standard)
+      </a>
+      <a 
+        href="{{ url_for('admin.purchase_stats', start_date=seven_days_ago, end_date=today, include_zero='1' if include_zero else '0') }}" 
+        class="btn {% if start_date == seven_days_ago and end_date == today %}btn-primary{% endif %}"
+        style="font-size: 0.8rem; padding: 0.25rem 0.6rem;"
+      >
+        Senaste 7 dagarna
+      </a>
+      <a 
+        href="{{ url_for('admin.purchase_stats', start_date=month_start, end_date=today, include_zero='1' if include_zero else '0') }}" 
+        class="btn {% if start_date == month_start and end_date == today %}btn-primary{% endif %}"
+        style="font-size: 0.8rem; padding: 0.25rem 0.6rem;"
+      >
+        Denna månad
+      </a>
+      <a 
+        href="{{ url_for('admin.purchase_stats', start_date='2020-01-01', end_date=today, include_zero='1' if include_zero else '0') }}" 
+        class="btn {% if start_date == '2020-01-01' and end_date == today %}btn-primary{% endif %}"
+        style="font-size: 0.8rem; padding: 0.25rem 0.6rem;"
+      >
+        All tid
+      </a>
+    </div>
+  </form>
+
+  <!-- Summary Metric Cards -->
+  <div class="stats-grid">
+    <div class="metric-card">
+      <span class="metric-label">Total omsättning</span>
+      <span class="metric-value">{{ "%.1f"|format(summary.total_amount) }} kr</span>
+      <span class="metric-sub">Försäljning under perioden</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Totalt sålda artiklar</span>
+      <span class="metric-value">{{ summary.total_count }} st</span>
+      <span class="metric-sub">Genomförda köp</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Mest köpta produkt</span>
+      <span class="metric-value" style="font-size: 1.35rem;">
+        {% if summary.top_product %}
+          {{ summary.top_product.product_name }}
+        {% else %}
+          Ingen
+        {% endif %}
+      </span>
+      <span class="metric-sub">
+        {% if summary.top_product %}
+          {{ summary.top_product.count }} st köpta ({{ "%.1f"|format(summary.top_product.total_amount) }} kr)
+        {% else %}
+          Inga köp under perioden
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Unika köpare</span>
+      <span class="metric-value">{{ summary.unique_users }} st</span>
+      <span class="metric-sub">Snittköp: {{ "%.1f"|format(summary.avg_purchase) }} kr/st</span>
+    </div>
+  </div>
+</div>
+
+<!-- Primary Section: Product Purchase Ranking (sorted most to least purchased) -->
+<div class="card" style="margin-top: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+    <div>
+      <h3 style="margin: 0;">Köpta produkter under perioden ({{ summary.by_product|length }} st)</h3>
+      <p style="color: var(--text-muted); margin: 0.25rem 0 0 0; font-size: 0.85rem;">
+        Sorterad efter mest köpta till minst köpta.
+      </p>
+    </div>
+  </div>
+
+  <div class="search-container" style="margin-bottom: 1rem;">
+    <input 
+      type="text" 
+      id="product-sales-search" 
+      class="search-input" 
+      placeholder="Sök produkt på namn, streckkod eller kategori..." 
+      autocomplete="off"
+    >
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 40px; text-align: center;">#</th>
+        <th>Produkt</th>
+        <th>Streckkod</th>
+        <th>Kategori</th>
+        <th style="text-align: right;">Antal köpta</th>
+        <th style="text-align: right;">Total omsättning</th>
+        <th style="text-align: right;">Snittpris</th>
+        <th style="text-align: right;">Andel</th>
+        <th style="text-align: center;">Åtgärd</th>
+      </tr>
+    </thead>
+    <tbody id="product-sales-tbody">
+      {% for item in summary.by_product %}
+        <tr class="product-sales-row" data-search="{{ item.product_name|lower }} {{ item.product_barcode|lower }} {{ item.category_name|lower }}">
+          <td style="text-align: center; color: var(--text-muted); font-weight: 700; font-size: 0.85rem;">
+            {{ item.rank }}
+          </td>
+          <td>
+            {% if item.product_image %}
+              <img src="{{ url_for('static', filename=item.product_image) }}" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 0.5rem;" alt="">
+            {% endif %}
+            <a href="{{ url_for('admin.product_show', barcode=item.product_barcode) }}" style="font-weight: 600; color: var(--text-main);">
+              {{ item.product_name }}
+            </a>
+          </td>
+          <td style="font-family: monospace; color: var(--text-muted); font-size: 0.85rem;">
+            {{ item.product_barcode }}
+          </td>
+          <td>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">{{ item.category_name }}</span>
+          </td>
+          <td style="text-align: right; font-weight: 800; font-size: 1.05rem; color: {% if item.count > 0 %}var(--text-main){% else %}var(--text-muted){% endif %};">
+            {{ item.count }} st
+          </td>
+          <td style="text-align: right; font-weight: 700;">
+            {{ "%.1f"|format(item.total_amount) }} kr
+          </td>
+          <td style="text-align: right; color: var(--text-muted); font-size: 0.9rem;">
+            {{ "%.1f"|format(item.avg_price) }} kr
+          </td>
+          <td style="text-align: right; font-size: 0.85rem; color: var(--text-muted);">
+            {% if summary.total_count > 0 %}
+              {{ "%.1f"|format(item.percent) }} %
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td style="text-align: center;">
+            <a href="{{ url_for('admin.product_show', barcode=item.product_barcode) }}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+              Redigera
+            </a>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            Inga produkter har blivit köpta under det valda tidsintervallet.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Aggregated Summary: Categories -->
+<div class="card" style="margin-top: 1.5rem;">
+  <h3 style="margin-top: 0; margin-bottom: 0.5rem;">Försäljning per kategori</h3>
+  <p style="color: var(--text-muted); margin: 0 0 1rem 0; font-size: 0.85rem;">
+    Sammanställning av antal köp och omsättning fördelat per kategori under perioden.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Kategori</th>
+        <th style="text-align: right;">Antal sålda artiklar</th>
+        <th style="text-align: right;">Total omsättning</th>
+        <th style="text-align: right;">Andel av omsättning</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat in summary.by_category %}
+        <tr>
+          <td><strong>{{ cat.category_name }}</strong></td>
+          <td style="text-align: right; font-weight: 600;">{{ cat.count }} st</td>
+          <td style="text-align: right; font-weight: 700;">{{ "%.1f"|format(cat.total_amount) }} kr</td>
+          <td style="text-align: right; color: var(--text-muted); font-size: 0.9rem;">
+            {{ "%.1f"|format(cat.percent) }} %
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+            Ingen försäljning registrerad under perioden.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Detailed Individual Transactions Log (Collapsible) -->
+<div class="card" style="margin-top: 1.5rem;">
+  <details>
+    <summary style="cursor: pointer; font-weight: 600; font-size: 1.05rem; padding: 0.25rem 0; user-select: none;">
+      Visa alla enskilda transaktioner under perioden ({{ purchases|length }} st köp)
+    </summary>
+
+    <div style="margin-top: 1rem;">
+      <div class="search-container" style="margin-bottom: 1rem;">
+        <input 
+          type="text" 
+          id="tx-search" 
+          class="search-input" 
+          placeholder="Filtrera transaktioner på användare, produkt, kategori eller datum..." 
+          autocomplete="off"
+        >
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Datum & Tid</th>
+            <th>Användare</th>
+            <th>Produkt</th>
+            <th>Kategori</th>
+            <th style="text-align: right;">Belopp</th>
+          </tr>
+        </thead>
+        <tbody id="tx-table-body">
+          {% for p in purchases %}
+            <tr class="tx-row" data-search="{{ p.created_at|lower }} {{ p.user_name|lower }} {{ p.user_barcode|lower }} {{ p.product_name|lower }} {{ p.category_name|lower }}">
+              <td style="font-family: monospace; white-space: nowrap; color: var(--text-muted); font-size: 0.85rem;">
+                {{ p.created_at }}
+              </td>
+              <td>
+                <a href="{{ url_for('admin.user_show', barcode=p.user_barcode) }}" style="font-weight: 600; color: var(--text-main); text-decoration: underline;">
+                  {{ p.user_name }}
+                </a>
+              </td>
+              <td>
+                <a href="{{ url_for('admin.product_show', barcode=p.product_barcode) }}" style="color: var(--text-main);">
+                  {{ p.product_name }}
+                </a>
+              </td>
+              <td>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">{{ p.category_name }}</span>
+              </td>
+              <td style="text-align: right; font-weight: 700; white-space: nowrap;">
+                {{ "%.1f"|format(p.price) }} kr
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                Inga enskilda transaktioner under det valda tidsintervallet.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</div>
+
+<script>
+  // Real-time filter for product ranking table
+  var prodSearch = document.getElementById('product-sales-search');
+  if (prodSearch) {
+    prodSearch.addEventListener('input', function() {
+      var val = this.value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.product-sales-row');
+      rows.forEach(function(row) {
+        var text = row.getAttribute('data-search') || '';
+        row.style.display = text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+  }
+
+  // Real-time filter for individual transactions table
+  var txSearch = document.getElementById('tx-search');
+  if (txSearch) {
+    txSearch.addEventListener('input', function() {
+      var val = this.value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.tx-row');
+      rows.forEach(function(row) {
+        var text = row.getAttribute('data-search') || '';
+        row.style.display = text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+  }
+</script>
+{% endblock %}

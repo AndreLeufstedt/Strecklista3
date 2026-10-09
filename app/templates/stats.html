@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+
+{% block title %}Statistik – Strecklistan{% endblock %}
+{% block header_title %}Statistik & Analys{% endblock %}
+
+{% block scanner %}{% endblock %}
+
+{% block head %}
+  <script src="{{ url_for('static', filename='dygraph-combined.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% set topprod = stats.top_product() %}
+  {% set topdebt = stats.top_user_debt() %}
+  {% set toptotal = stats.top_user_total() %}
+
+  <h2>Översikt & Nyckeltal</h2>
+
+  <div class="stats-grid">
+    <div class="metric-card">
+      <span class="metric-label">Senaste 4 veckorna</span>
+      <span class="metric-value">{{ "%.1f"|format(stats.total_four_weeks()) }} kr</span>
+      <span class="metric-sub">Rullande 28 dagars omsättning</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Total omsättning all-time</span>
+      <span class="metric-value">{{ "%.1f"|format(stats.total_all_time()) }} kr</span>
+      <span class="metric-sub">Totalt ackumulerat streckat</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Totalt antal köp</span>
+      <span class="metric-value">{{ stats.total_purchases_count() }} st</span>
+      <span class="metric-sub">Registrerade artiklar</span>
+    </div>
+
+    <div class="metric-card">
+      <span class="metric-label">Mest populära produkt</span>
+      <span class="metric-value" style="font-size: 1.4rem;">{{ topprod[0] }}</span>
+      <span class="metric-sub">{{ topprod[1] }} st sålda</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 2rem;">Försäljningsutveckling (senaste 28 dagarna)</h3>
+  <div id="graph" style="width: 100%; height: 320px; background: white; margin: 1rem 0; border: 1px solid var(--border); border-radius: 6px;"></div>
+
+  <script>
+    window.addEventListener('load', function() {
+      var to = new Date();
+      var from = new Date(to.getTime() - (28 * 24 * 60 * 60 * 1000));
+      new Dygraph(
+        document.getElementById("graph"),
+        "{{ url_for('stats.timeseries_csv') }}",
+        {
+          dateWindow: [from, to],
+          legend: 'always',
+          colors: ['#2b6cb0', '#38a169', '#dd6b20', '#805ad5', '#e53e3e']
+        }
+      );
+    });
+  </script>
+</div>
+
+<div class="card">
+  <h2>Topplistor</h2>
+
+  <h3 style="margin-top: 1.5rem;">Topp 3 användare just nu (högst skuld)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Användare</th>
+        <th style="text-align: right;">Skuld</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in stats.toplist_user_now(3) %}
+        <tr>
+          <td>
+            <a href="{{ url_for('stats.user_stats', barcode=u.barcode) }}" style="color: var(--text-main); text-decoration: underline; font-weight: bold;">
+              {{ u.name }}
+            </a>
+          </td>
+          <td style="text-align: right; font-weight: bold; color: var(--danger);">{{ "%.1f"|format(u.debt()) }} kr</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 2rem;">Topp 3 användare all-time (mest handlat)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Användare</th>
+        <th style="text-align: right;">Antal köp</th>
+        <th style="text-align: right;">Totalt belopp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in stats.toplist_user_alltime(3) %}
+        <tr>
+          <td><strong>{{ u['name'] }}</strong></td>
+          <td style="text-align: right;">{{ u['count'] }} st</td>
+          <td style="text-align: right; font-weight: bold;">{{ "%.1f"|format(u['total']) }} kr</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% for cat in categories %}
+    <h3 style="margin-top: 2rem;">Mest populära produkter – {{ cat.name }}</h3>
+    {% set cat_prods = stats.toplist_product(cat.id, 3) %}
+    {% if cat_prods %}
+      <table>
+        <thead>
+          <tr>
+            <th>Produkt</th>
+            <th style="text-align: right;">Antal</th>
+            <th style="text-align: right;">Summa</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in cat_prods %}
+            <tr>
+              <td><strong>{{ p['name'] }}</strong></td>
+              <td style="text-align: right;">{{ p['count'] }} st</td>
+              <td style="text-align: right;">{{ "%.1f"|format(p['total']) }} kr</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color: var(--text-muted); margin-top: 0.5rem;">Inga köp registrerade i denna kategori.</p>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="card" id="person-statistik">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
+    <h2>Personstatistik ({{ users_summary|length }})</h2>
+  </div>
+  <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
+    Klicka på valfri person för att se en fullständig analys över exakt vad personen har köpt av allting, kategorifördelning och köphistorik.
+  </p>
+
+  <div class="search-container">
+    <form action="{{ url_for('stats.index') }}#person-statistik" method="get" style="display: flex; gap: 0.5rem; width: 100%;">
+      <input 
+        type="text" 
+        name="q" 
+        id="user-stats-search" 
+        value="{{ search_query or '' }}" 
+        class="search-input" 
+        placeholder="Sök person på namn eller streckkod..." 
+        autocomplete="off"
+      >
+      <button type="submit" class="btn">Sök</button>
+      {% if search_query %}
+        <a href="{{ url_for('stats.index') }}#person-statistik" class="btn">Rensa</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table id="user-stats-table">
+      <thead>
+        <tr>
+          <th>Person</th>
+          <th style="text-align: right;">Köpta varor</th>
+          <th style="text-align: right;">Totalt spenderat</th>
+          <th style="text-align: right;">Åtgärd</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users_summary %}
+          <tr class="user-stats-row" data-search="{{ u.name|lower }} {{ u.barcode|lower }}">
+            <td>
+              {% if u.image %}
+                <img src="{{ url_for('static', filename=u.image) }}" style="width: 28px; height: 28px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 0.5rem;" alt="">
+              {% endif %}
+              <strong>{{ u.name }}</strong>
+            </td>
+            <td style="text-align: right;">{{ u.items_count }} st</td>
+            <td style="text-align: right; font-weight: bold;">
+              {{ "%.1f"|format(u.total_spent) }} kr
+            </td>
+            <td style="text-align: right; white-space: nowrap;">
+              <a href="{{ url_for('stats.user_stats', barcode=u.barcode) }}" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+                Visa köpstatistik
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+              Inga personer matchade sökningen.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Instant real-time search filtering for person statistics
+  var userSearchInput = document.getElementById('user-stats-search');
+  if (userSearchInput) {
+    userSearchInput.addEventListener('input', function() {
+      var val = this.value.toLowerCase().trim();
+      var rows = document.querySelectorAll('.user-stats-row');
+      rows.forEach(function(row) {
+        var text = row.getAttribute('data-search') || '';
+        row.style.display = text.indexOf(val) !== -1 ? '' : 'none';
+      });
+    });
+  }
+</script>
+{% endblock %}

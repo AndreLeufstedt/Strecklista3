@@ -1,0 +1,80 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Inställningar – Administration{% endblock %}
+{% block header_title %}Systeminställningar{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+  <h2>Terminaltider & Kiosk-inställningar</h2>
+  <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Här kan du anpassa tidsintervall och prissättning för terminalen.
+  </p>
+
+  <form action="{{ url_for('admin.settings') }}" method="post">
+    <div class="form-group">
+      <label for="user_timeout">
+        Utloggning vid inaktivitet (sekunder):
+      </label>
+      <input 
+        type="number" 
+        min="1" 
+        max="300" 
+        step="1" 
+        name="user_timeout" 
+        id="user_timeout" 
+        class="form-control" 
+        value="{{ settings.get('user_timeout', '15') }}" 
+        required
+      >
+      <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+        Antal sekunder som användarsidan visas innan systemet automatiskt loggar ut och återgår till startskärmen (standard: 15).
+      </small>
+    </div>
+
+    <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="confirm_timeout">
+        Visningstid för bekräftelse (sekunder):
+      </label>
+      <input 
+        type="number" 
+        min="1" 
+        max="60" 
+        step="1" 
+        name="confirm_timeout" 
+        id="confirm_timeout" 
+        class="form-control" 
+        value="{{ settings.get('confirm_timeout', '3') }}" 
+        required
+      >
+      <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+        Antal sekunder som bekräftelserutan (vid köpt vara, ångrat köp eller betalning) visas innan användarsidan återställs (standard: 3).
+      </small>
+    </div>
+
+    <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="guest_surcharge">
+        Gästpåslag vid fristående produktskanning (kr):
+      </label>
+      <input 
+        type="number" 
+        min="0" 
+        max="100" 
+        step="0.5" 
+        name="guest_surcharge" 
+        id="guest_surcharge" 
+        class="form-control" 
+        value="{{ settings.get('guest_surcharge', '3') }}" 
+        required
+      >
+      <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+        Prispåslag som adderas till ordinarie pris när en produkt skannas direkt från startskärmen utan inloggad användare (standard: 3 kr).
+      </small>
+    </div>
+
+    <div class="actions-row" style="margin-top: 2rem;">
+      <button type="submit" class="btn btn-primary">Spara inställningar</button>
+      <a href="{{ url_for('admin.product_list') }}" class="btn">Tillbaka</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
