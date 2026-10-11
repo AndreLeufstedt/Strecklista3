@@ -1,7 +1,9 @@
 .venv
 include
-streck.db-shm
-streck.db-wal
+
 lib
 .DS-Store
 pyvenv.cfg
+*.db
+streck.*
+
