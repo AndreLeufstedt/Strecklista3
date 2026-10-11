@@ -1,7 +1,12 @@
 import os
+import sys
 import unittest
 import tempfile
 import shutil
+
+# Ensure project root is on sys.path for VS Code unittest discovery
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app import create_app
 from app.db import init_db
 from app.models.user import User

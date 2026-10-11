@@ -1,5 +1,5 @@
 # Variables
-VENV := venv
+VENV := .venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 
